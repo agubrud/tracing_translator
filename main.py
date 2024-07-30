@@ -41,8 +41,8 @@ class StartEndSeparate(_ProfileType):
                 start = self.stat_dict[l][0][idx]
                 end   = self.stat_dict[l][1][idx]
                 e = generate_detailed_entry(ph="X", cat="cpu_op", name=l, 
-                                                pid=2567, tid=67530, ts=start, dur=(end - start), 
-                                                args={"Ev Idx": 1})
+                                                pid=0, tid=0, ts=start, dur=(end - start), 
+                                                args=None)
                 entries.append(e)
         return entries
 
@@ -59,14 +59,14 @@ def load_config(cfg):
     with open(cfg, 'r') as f:
         return yaml.safe_load(f)
     
-def generate_json(profile_types):
+def generate_json(profile_types, output_fname):
     outdict = {"traceEvents": []}
     
     for pt in profile_types:
         for e in pt.create_entries():
             outdict['traceEvents'].append(e)
 
-    with open('test.json', 'w') as f:
+    with open(output_fname, 'w') as f:
         json.dump(outdict, f, indent=2)
 
 def main():
@@ -75,9 +75,7 @@ def main():
     for c in cfg['inputs']:
         profile_types.append(ProfileType(c))
 
-    generate_json(profile_types)
-
-
+    generate_json(profile_types, cfg.get('output_name', 'out.json'))
     
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
