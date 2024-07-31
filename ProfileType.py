@@ -5,16 +5,36 @@ from io import StringIO
 class _ProfileType():
     def __init__(self, cfg):
         self.cfg = cfg
+        self.file_name = cfg.get('file_name')
         self.description = cfg.get('description', 'stats')
+        self.delimiter = cfg.get('delimiter', ',')
         self.pid = cfg.get('pid', 0)
         self.tid = cfg.get('tid', 0)
-        self.log_data_df = pd.read_csv(cfg.get('file_name'), delimiter=self.cfg.get('delimiter'),header=None)
-        self.log_data_df.columns = self.cfg.get('header').strip().split(',')
         self.stat_dict = dict()
         self.min_ts = float('inf')
         self.max_ts = 0
+        self.regex_list = cfg.get('regex_list', [])
+        self.log_data_df = self.prepare_input_data()
+        self.log_data_df.columns = self.cfg.get('header').strip().split(',')
 
         self.log_data_to_dict()
+    
+    def prepare_input_data(self):
+        with open(self.file_name, 'r') as f:
+            input_data = f.readlines()
+
+        filtered_data = []
+        for l in input_data:
+            if all(regex in l for regex in self.regex_list):
+                filtered_data.append(l)
+
+        try:
+            df = pd.read_csv(StringIO(''.join(filtered_data)), delimiter=self.delimiter, header=None)
+        except pd.errors.EmptyDataError as e:
+            print('No matches found')
+            exit()
+        
+        return df
 
 class StartEndSeparate(_ProfileType):
     def log_data_to_dict(self):
