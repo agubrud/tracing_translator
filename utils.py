@@ -10,6 +10,15 @@ def generate_detailed_entry(ph, cat, name, pid, tid, ts, dur, args):
         "args": args
         }
         return entry
+
+def generate_thread_name_entry(ts, pid, tid, label):
+    entry = {
+    "name": "thread_name", "ph": "M", "ts": ts, "pid": pid, "tid": tid,
+    "args": {
+      "name": f"{label}"
+    }
+    }
+    return entry
     
 def generate_entry(ph, name, s, pid, tid, ts, args):
     entry = {
