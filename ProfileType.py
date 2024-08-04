@@ -15,9 +15,6 @@ class _ProfileType():
         self.max_ts = 0
         self.regex_list = cfg.get('regex_list', [])
         self.log_data_df = self.prepare_input_data()
-        self.log_data_df.columns = self.cfg.get('header').strip().split(',')
-
-        self.log_data_to_dict()
     
     def prepare_input_data(self):
         with open(self.file_name, 'r') as f:
@@ -37,6 +34,11 @@ class _ProfileType():
         return df
 
 class StartEndSeparate(_ProfileType):
+    def __init__(self, cfg):
+        super().__init__(cfg)
+        self.log_data_df.columns = self.cfg.get('header').strip().split(',')
+        self.log_data_to_dict()
+        
     def log_data_to_dict(self):
         
         timing_fmt = self.cfg.get('timing_format')
@@ -72,11 +74,57 @@ class StartEndSeparate(_ProfileType):
         entries.append(generate_thread_name_entry(self.min_ts, self.pid, self.tid, self.description))
 
         return entries
+    
+class StartDurCombined(_ProfileType):
+    def __init__(self, cfg):
+        super().__init__(cfg)
+        last_column = self.log_data_df.columns[-1]
+        self.log_data_df = self.log_data_df.drop(columns=last_column)
+
+        self.log_data_df.columns = self.cfg.get('header').strip().split(',')
+        self.log_data_df = self.log_data_df.iloc[1:]
+        self.log_data_to_dict()
+
+    def log_data_to_dict(self):
+        
+        timing_fmt = self.cfg.get('timing_format')
+        for index, row in self.log_data_df.iterrows():
+            field = row[timing_fmt.get('field_name')]
+            event = float(row[timing_fmt.get('event_name')])
+            ts = float(row[timing_fmt.get('ts_name')])
+            ts_multiplier = float(timing_fmt.get('ts_multiplier', 1.0))
+
+            self.min_ts = min(self.min_ts, ts)
+            self.max_ts = max(self.max_ts, ts)
+
+            if field not in self.stat_dict.keys():
+                self.stat_dict[field] = [[], []]
+
+            self.stat_dict[field][0].append(ts * ts_multiplier)
+            self.stat_dict[field][1].append((ts + event) * ts_multiplier)
+    
+    def create_entries(self):
+        entries = []
+
+        for l in self.stat_dict.keys():
+            for idx in range(len(self.stat_dict[l][0])):
+                start = self.stat_dict[l][0][idx]
+                end   = self.stat_dict[l][1][idx]
+                entries.append( 
+                    generate_detailed_entry(ph="X", cat="cpu_op", name=l, pid=self.pid, tid=self.tid, 
+                                            ts=start, dur=(end - start), args=None)
+                )
+                
+        entries.append(generate_thread_name_entry(self.min_ts, self.pid, self.tid, self.description))
+
+        return entries
 
 class ProfileType():
     def __init__(self, cfg):
         if cfg.get('timing_format') is not None and cfg.get('timing_format').get('type') == "start_end_separate":
             self.instance = StartEndSeparate(cfg)
+        elif cfg.get('timing_format') is not None and cfg.get('timing_format').get('type') == "start_dur_combined":
+            self.instance = StartDurCombined(cfg)
 
     def __getattr__(self, name):
         # assume it is implemented by self.instance
