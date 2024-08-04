@@ -1,6 +1,7 @@
 from utils import generate_detailed_entry, generate_thread_name_entry
 import pandas as pd
 from io import StringIO
+import json
 
 class _ProfileType():
     def __init__(self, cfg):
@@ -14,7 +15,7 @@ class _ProfileType():
         self.min_ts = float('inf')
         self.max_ts = 0
         self.regex_list = cfg.get('regex_list', [])
-        self.log_data_df = self.prepare_input_data()
+        self.log_data = self.prepare_input_data()
     
     def prepare_input_data(self):
         with open(self.file_name, 'r') as f:
@@ -36,13 +37,13 @@ class _ProfileType():
 class StartEndSeparate(_ProfileType):
     def __init__(self, cfg):
         super().__init__(cfg)
-        self.log_data_df.columns = self.cfg.get('header').strip().split(',')
+        self.log_data.columns = self.cfg.get('header').strip().split(',')
         self.log_data_to_dict()
         
     def log_data_to_dict(self):
         
         timing_fmt = self.cfg.get('timing_format')
-        for index, row in self.log_data_df.iterrows():
+        for index, row in self.log_data.iterrows():
             field = row[timing_fmt.get('field_name')]
             event = row[timing_fmt.get('event_name')]
             ts = float(row[timing_fmt.get('ts_name')])
@@ -78,17 +79,17 @@ class StartEndSeparate(_ProfileType):
 class StartDurCombined(_ProfileType):
     def __init__(self, cfg):
         super().__init__(cfg)
-        last_column = self.log_data_df.columns[-1]
-        self.log_data_df = self.log_data_df.drop(columns=last_column)
+        last_column = self.log_data.columns[-1]
+        self.log_data = self.log_data.drop(columns=last_column)
 
-        self.log_data_df.columns = self.cfg.get('header').strip().split(',')
-        self.log_data_df = self.log_data_df.iloc[1:]
+        self.log_data.columns = self.cfg.get('header').strip().split(',')
+        self.log_data = self.log_data.iloc[1:]
         self.log_data_to_dict()
 
     def log_data_to_dict(self):
         
         timing_fmt = self.cfg.get('timing_format')
-        for index, row in self.log_data_df.iterrows():
+        for index, row in self.log_data.iterrows():
             field = row[timing_fmt.get('field_name')]
             event = float(row[timing_fmt.get('event_name')])
             ts = float(row[timing_fmt.get('ts_name')])
@@ -118,6 +119,22 @@ class StartDurCombined(_ProfileType):
         entries.append(generate_thread_name_entry(self.min_ts, self.pid, self.tid, self.description))
 
         return entries
+    
+class JSONTracePassThru(_ProfileType):
+    def __init__(self, cfg):
+        super().__init__(cfg)
+
+        self.create_entries()
+
+    def prepare_input_data(self):
+        with open(self.file_name, 'r') as f:
+            input_data = json.load(f)
+
+        return input_data['traceEvents']
+    
+    def create_entries(self):
+        return self.log_data
+
 
 class ProfileType():
     def __init__(self, cfg):
@@ -125,6 +142,8 @@ class ProfileType():
             self.instance = StartEndSeparate(cfg)
         elif cfg.get('timing_format') is not None and cfg.get('timing_format').get('type') == "start_dur_combined":
             self.instance = StartDurCombined(cfg)
+        elif cfg.get('timing_format') is not None and cfg.get('timing_format').get('type') == "json_trace_pass_thru":
+            self.instance = JSONTracePassThru(cfg)
 
     def __getattr__(self, name):
         # assume it is implemented by self.instance
