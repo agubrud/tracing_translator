@@ -33,6 +33,23 @@ class _ProfileType():
             exit()
         
         return df
+    
+    def create_entries(self):
+        entries = []
+
+        for l in self.stat_dict.keys():
+            for idx in range(len(self.stat_dict[l]['ts'][0])):
+                start = self.stat_dict[l]['ts'][0][idx]
+                end   = self.stat_dict[l]['ts'][1][idx]
+                args = self.stat_dict[l]['args'][idx]
+                entries.append( 
+                    generate_detailed_entry(ph="X", cat="cpu_op", name=l, pid=self.pid, tid=self.tid, 
+                                            ts=start, dur=(end - start), args=args)
+                )
+                
+        entries.append(generate_thread_name_entry(self.min_ts, self.pid, self.tid, self.description))
+
+        return entries
 
 class StartEndSeparate(_ProfileType):
     def __init__(self, cfg):
@@ -61,23 +78,6 @@ class StartEndSeparate(_ProfileType):
                 self.stat_dict[field]['ts'][1].append(ts * ts_multiplier)
 
             self.stat_dict[field]['args'].append(dict())
-    
-    def create_entries(self):
-        entries = []
-
-        for l in self.stat_dict.keys():
-            for idx in range(len(self.stat_dict[l]['ts'][0])):
-                start = self.stat_dict[l]['ts'][0][idx]
-                end   = self.stat_dict[l]['ts'][1][idx]
-                args = self.stat_dict[l]['args'][idx]
-                entries.append( 
-                    generate_detailed_entry(ph="X", cat="cpu_op", name=l, pid=self.pid, tid=self.tid, 
-                                            ts=start, dur=(end - start), args=args)
-                )
-                
-        entries.append(generate_thread_name_entry(self.min_ts, self.pid, self.tid, self.description))
-
-        return entries
     
 class StartDurCombined(_ProfileType):
     def __init__(self, cfg):
@@ -112,23 +112,6 @@ class StartDurCombined(_ProfileType):
                 argdict[e] = row[e]
 
             self.stat_dict[field]['args'].append(argdict)
-    
-    def create_entries(self):
-        entries = []
-
-        for l in self.stat_dict.keys():
-            for idx in range(len(self.stat_dict[l]['ts'][0])):
-                start = self.stat_dict[l]['ts'][0][idx]
-                end   = self.stat_dict[l]['ts'][1][idx]
-                args = self.stat_dict[l]['args'][idx]
-                entries.append( 
-                    generate_detailed_entry(ph="X", cat="cpu_op", name=l, pid=self.pid, tid=self.tid, 
-                                            ts=start, dur=(end - start), args=args)
-                )
-                
-        entries.append(generate_thread_name_entry(self.min_ts, self.pid, self.tid, self.description))
-
-        return entries
     
 class JSONTracePassThru(_ProfileType):
     def __init__(self, cfg):
