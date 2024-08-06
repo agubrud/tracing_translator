@@ -2,6 +2,7 @@ from utils import generate_detailed_entry, generate_thread_name_entry
 import pandas as pd
 from io import StringIO
 import json
+import re
 
 class _ProfileType():
     def __init__(self, cfg):
@@ -23,7 +24,7 @@ class _ProfileType():
 
         filtered_data = []
         for l in input_data:
-            if all(regex in l for regex in self.regex_list):
+            if all(re.search(regex, l) for regex in self.regex_list):
                 filtered_data.append(l)
 
         try:
@@ -82,11 +83,7 @@ class StartEndSeparate(_ProfileType):
 class StartDurCombined(_ProfileType):
     def __init__(self, cfg):
         super().__init__(cfg)
-        last_column = self.log_data.columns[-1]
-        self.log_data = self.log_data.drop(columns=last_column)
-
         self.log_data.columns = self.cfg.get('header').strip().split(',')
-        self.log_data = self.log_data.iloc[1:]
         self.log_data_to_dict()
 
     def log_data_to_dict(self):
@@ -107,9 +104,12 @@ class StartDurCombined(_ProfileType):
             self.stat_dict[field]['ts'][0].append(ts * ts_multiplier)
             self.stat_dict[field]['ts'][1].append((ts + event) * ts_multiplier)
 
-            argdict = dict()
-            for e in timing_fmt.get('arg_fields'):
-                argdict[e] = row[e]
+            if timing_fmt.get('arg_fields') is not None:
+                argdict = dict()
+                for e in timing_fmt.get('arg_fields'):
+                    argdict[e] = row[e]
+            else:
+                argdict = None
 
             self.stat_dict[field]['args'].append(argdict)
     
