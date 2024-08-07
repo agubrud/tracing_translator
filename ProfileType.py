@@ -16,6 +16,7 @@ class _ProfileType():
         self.min_ts = float('inf')
         self.max_ts = 0
         self.regex_list = cfg.get('regex_list', [])
+        self.removable_prefix = cfg.get('removable_prefix', '')
         self.log_data = self.prepare_input_data()
     
     def prepare_input_data(self):
@@ -25,7 +26,7 @@ class _ProfileType():
         filtered_data = []
         for l in input_data:
             if all(re.search(regex, l) for regex in self.regex_list):
-                filtered_data.append(l)
+                filtered_data.append(l.replace(self.removable_prefix, ''))
 
         try:
             df = pd.read_csv(StringIO(''.join(filtered_data)), delimiter=self.delimiter, header=None)
