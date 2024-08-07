@@ -84,27 +84,6 @@ class StartEndSeparate(_ProfileType):
                 self.stat_dict[field]['ts'][1].append(ts * ts_multiplier)
 
             self.stat_dict[field]['args'].append(dict())
-
-        """
-        for index, row in self.log_data.iterrows():
-            field = row[timing_fmt.get('field_name')]
-            event = row[timing_fmt.get('event_name')]
-            ts = float(row[timing_fmt.get('ts_name')])
-            ts_multiplier = float(timing_fmt.get('ts_multiplier', 1.0))
-
-            self.min_ts = min(self.min_ts, ts)
-            self.max_ts = max(self.max_ts, ts)
-
-            if field not in self.stat_dict.keys():
-                self.stat_dict[field] = {'args': [], 'ts': [[], []]}
-
-            if event == 'start':
-                self.stat_dict[field]['ts'][0].append(ts * ts_multiplier)
-            else:
-                self.stat_dict[field]['ts'][1].append(ts * ts_multiplier)
-
-            self.stat_dict[field]['args'].append(dict())
-        """
     
 class StartDurCombined(_ProfileType):
     def __init__(self, cfg):
@@ -144,32 +123,6 @@ class StartDurCombined(_ProfileType):
                 argdict = None
 
             self.stat_dict[field]['args'].append(argdict)
-
-        """
-        for index, row in self.log_data.iterrows():
-            field = row[timing_fmt.get('field_name')]
-            event = float(row[timing_fmt.get('event_name')])
-            ts = float(row[timing_fmt.get('ts_name')])
-            ts_multiplier = float(timing_fmt.get('ts_multiplier', 1.0))
-
-            self.min_ts = min(self.min_ts, ts)
-            self.max_ts = max(self.max_ts, ts)
-
-            if field not in self.stat_dict.keys():
-                self.stat_dict[field] = {'args': [], 'ts': [[], []]}
-
-            self.stat_dict[field]['ts'][0].append(ts * ts_multiplier)
-            self.stat_dict[field]['ts'][1].append((ts + event) * ts_multiplier)
-
-            if timing_fmt.get('arg_fields') is not None:
-                argdict = dict()
-                for e in timing_fmt.get('arg_fields'):
-                    argdict[e] = row[e]
-            else:
-                argdict = None
-
-            self.stat_dict[field]['args'].append(argdict)
-        """
     
 class JSONTracePassThru(_ProfileType):
     def __init__(self, cfg):
