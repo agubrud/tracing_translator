@@ -14,7 +14,9 @@ python3 -m pip install -r requirements.txt
 
 ### Configuration
 
-To use this utility, you must first define a config YAML (e.g. cfg.yml). Better documentation to come - for now, an example :)
+To use this utility, you must first define a config YAML (e.g. cfg.yml). 
+
+#### Example
 
 ```yaml
 inputs:
@@ -58,6 +60,26 @@ inputs:
 output_name: 'out.json'
 ```
 
+#### Input Types
+
+| Name | Description |
+|---|---|
+| `start_dur_combined` | Log file where the start timestamp and the duration are included on the same time | 
+| `start_end_separate` | Log file where the start timestamp is on one line and the end timestamp is on another |
+| `json_trace_pass_tru` | JSON file that is already viewable in the Chromium Tracing UI | 
+
+#### Attributes To Assist Log File Processing
+
+| Name | Description | 
+|---|---|
+| `header` | Comma separated string identifying the components present in the entries of the log file |
+| `field_name` | Reflects the name of the operation |
+| `event_name` | Reflects where to find the event name (Could be start/stop events or a duration entry) |
+| `ts_name` | Reflects where to find the name of the timestamp |
+| `arg_fields` | Additional operation details |
+| `ts_multiplier` | Value to multiply the timestamp value to get everything on the same time scale |
+| `regex_list` | Regular expression(s) to isolate entries in input log file where relevant data is present |
+
 ### Running The Utility
 
 ```bash
@@ -66,4 +88,4 @@ python main.py -c cfg.yml
 
 #### Outputs
 
-Will output `out.json` which you can view with a trace viewer (e.g. chrome://tracing, https://ui.perfetto.dev/)
+Will output `out.json` which you can view with a trace viewer (e.g. `chrome://tracing`, https://ui.perfetto.dev/)
