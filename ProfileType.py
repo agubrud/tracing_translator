@@ -3,6 +3,8 @@ import pandas as pd
 from io import StringIO
 import json
 import re
+import math
+import numpy as np
 
 class _ProfileType():
     def __init__(self, cfg):
@@ -130,11 +132,53 @@ class JSONTracePassThru(_ProfileType):
         super().__init__(cfg)
 
         self.create_entries()
+    
+    def enhance_input_data(self, input_data):
+        dt_lookup = {'float': 4}
+        for e in input_data['traceEvents']:
+            if 'aten::conv2d' in e.get('name').lower():
+                input_dims = e.get('args').get('Input Dims')[0]
+                wt_dims = e.get('args').get('Input Dims')[1]
+
+                val_lists = []
+                for idx, val in enumerate(e.get('args').get('Input type')):
+                    if val == "ScalarList":
+                        val_lists.append(eval(e.get('args').get('Concrete Inputs')[idx]))
+
+                padding = val_lists[1]
+                stride = val_lists[0]
+                dilation = val_lists[2]
+
+                out_x = math.floor((input_dims[-2] + (2 * padding[0]) - (dilation[0] * (wt_dims[-2] - 1))-1)/stride[0] + 1)
+                out_y = math.floor((input_dims[-1] + (2 * padding[1]) - (dilation[1] * (wt_dims[-1] - 1))-1)/stride[1] + 1)
+                output_dims = [input_dims[0], wt_dims[0], out_x, out_y]
+
+                mac_count = input_dims[0] * (input_dims[1] * wt_dims[-2] * wt_dims[-1] * out_x * out_y) * wt_dims[0]
+                op_count = mac_count * 2
+
+                wt_dtype = dt_lookup[e.get('args').get('Input type')[1]]
+                time_s = (e.get('dur')/1e6)
+                e['args']['wt_mem_bw_gbps'] = int(np.prod(wt_dims))*wt_dtype/time_s/1e9
+                e['args']['ops'] = op_count
+                e['args']['effective_gops'] = op_count/time_s/1e9
+            if 'aten::linear' in e.get('name').lower():
+                input_dims = e.get('args').get('Input Dims')[0]
+                wt_dims = e.get('args').get('Input Dims')[1]
+
+                mac_count = input_dims[0] * input_dims[1] * wt_dims[0]
+                op_count = mac_count * 2
+
+                wt_dtype = dt_lookup[e.get('args').get('Input type')[1]]
+                time_s = (e.get('dur')/1e6)
+                e['args']['wt_mem_bw_gbps'] = int(np.prod(wt_dims))*wt_dtype/time_s/1e9
+                e['args']['ops'] = op_count
+                e['args']['effective_gops'] = op_count/time_s/1e9
+
 
     def prepare_input_data(self):
         with open(self.file_name, 'r') as f:
             input_data = json.load(f)
-
+        self.enhance_input_data(input_data)
         return input_data['traceEvents']
     
     def create_entries(self):
